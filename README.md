@@ -28,14 +28,19 @@ Reads data from Huawei SmartLogger 3000 devices.
 
 #### Operations
 
-1. **Read All Data** - Retrieve complete system data in one call
-2. **Read Power Data** - Get power monitoring data (active/reactive power, current, energy)
-3. **Read Environmental Data** - Get environmental sensors data (temperature, irradiance, wind)
-4. **Read System Info** - Get system information (datetime, location, DST settings)
-5. **Read Alarms** - Get alarm and status information
-6. **Discover Devices** - Scan for all connected devices on the Modbus network
+1. **Read Data** - Read selected data categories (system, power, environmental, alarms)
+2. **Discover Devices** - Scan for all connected devices on the Modbus network
 
-#### Configuration
+### SUN2000 Inverter
+
+Reads data from individual Huawei SUN2000 inverters.
+
+#### Operations
+
+1. **Read Inverter Data** - Read data from manually specified inverter addresses
+2. **Read From Discovery** - Read data from inverters discovered by SmartLogger node
+
+#### SmartLogger Configuration
 
 - **Host**: IP address of the SmartLogger (e.g., `192.168.1.10`)
 - **Port**: Modbus TCP port (default: `502`)
@@ -43,29 +48,39 @@ Reads data from Huawei SmartLogger 3000 devices.
 - **Connection Timeout**: Timeout in milliseconds (default: `5000`)
 - **Retry Attempts**: Number of retry attempts on failure (default: `3`)
 
-#### Discovery Options
+#### SmartLogger Discovery Options
 
 - **Discovery Range**: Unit IDs to scan (default: `1-247`)
 - **Discovery Timeout**: Shorter timeout for discovery operations (default: `2000ms`)
 - **Parallel Scan Count**: Number of simultaneous scans (default: `10`)
 
+#### SUN2000 Configuration
+
+- **Data Categories**: Select power, status, and/or fault data
+- **Discovery Input Source**: Use SmartLogger discovery output or manual configuration
+- **Filter Inverters Only**: Whether to only read SUN2000 devices from discovery
+- **Inverter Addresses**: Manual list of inverter addresses (when not using discovery)
+
 ## Example Output
 
-### Power Data
+### SmartLogger Power Data
 ```json
 {
-  "dcCurrentTotal": 125.6,
-  "inputPowerTotal": 87.3,
-  "activePowerTotal": 85.2,
-  "reactivePowerTotal": 12.5,
-  "powerFactor": 0.985,
-  "plantStatus": "Unlimited",
-  "totalEnergy": 524312.5,
-  "dailyEnergy": 312.7
+  "power": {
+    "dcCurrentTotal": 125.6,
+    "inputPowerTotal": 87.3,
+    "co2Reduction": 45234.5,
+    "activePowerTotal": 85.2,
+    "reactivePowerTotal": 12.5,
+    "powerFactor": 0.985,
+    "plantStatus": "Unlimited",
+    "totalEnergy": 524312.5,
+    "dailyEnergy": 312.7
+  }
 }
 ```
 
-### Device Discovery
+### SmartLogger Device Discovery
 ```json
 {
   "allDevices": [
@@ -82,6 +97,27 @@ Reads data from Huawei SmartLogger 3000 devices.
       "connectionStatus": "Online",
       "portNumber": 3,
       "deviceAddress": 12
+    }
+  ]
+}
+```
+
+### SUN2000 Inverter Data
+```json
+{
+  "inverters": [
+    {
+      "unitId": 12,
+      "deviceName": "100KTL-M2(COM3-12)",
+      "activePower": 85.2,
+      "reactivePower": 12.1,
+      "dcCurrent": 125.6,
+      "inputPower": 87.3,
+      "powerFactor": 0.985,
+      "status": 49152,
+      "connectionStatus": "Status: 0xC000",
+      "cabinetTemperature": 45.2,
+      "insulationResistance": 1250.5
     }
   ]
 }
@@ -120,8 +156,10 @@ Reads data from Huawei SmartLogger 3000 devices.
 
 ## Version History
 
+- **0.0.5** - Added SUN2000 Inverter node with discovery integration
+- **0.0.4** - Simplified SmartLogger UI with checkbox data selection, added CO2 reduction and Xinjiang status
 - **0.0.3** - Fixed parallel discovery unit ID conflicts
-- **0.0.2** - Added parallel discovery, removed redundant inverter section
+- **0.0.2** - Added parallel discovery, removed redundant inverter section  
 - **0.0.1** - Initial release with SmartLogger node
 
 ## Contributing
