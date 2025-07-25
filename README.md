@@ -1,48 +1,137 @@
-![Banner image](https://user-images.githubusercontent.com/10284570/173569848-c624317f-42b1-45a6-ab09-f0ea3c247648.png)
+# n8n-nodes-huaweisolar
 
-# n8n-nodes-starter
+N8N community nodes for reading data from Huawei SmartLogger 3000 and SUN2000 inverters via Modbus TCP protocol.
 
-This repo contains example nodes to help you get started building your own custom integrations for [n8n](https://n8n.io). It includes the node linter and other dependencies.
+## Features
 
-To make your custom node available to the community, you must create it as an npm package, and [submit it to the npm registry](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry).
+- 🔌 **Direct Modbus TCP communication** with Huawei SmartLogger 3000
+- ⚡ **Fast parallel device discovery** with configurable timeouts
+- 📊 **Comprehensive data reading** including power, environmental, system, and alarm data
+- 🔧 **Critical Huawei-specific fixes** applied (little-endian byte order, correct unit IDs)
+- 🚀 **Optimized performance** with connection management and retry logic
 
-If you would like your node to be available on n8n cloud you can also [submit your node for verification](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/).
+## Installation
 
-## Prerequisites
+Install this node in your N8N instance:
 
-You need the following installed on your development machine:
+```bash
+npm install n8n-nodes-huaweisolar
+```
 
-* [git](https://git-scm.com/downloads)
-* Node.js and npm. Minimum version Node 20. You can find instructions on how to install both using nvm (Node Version Manager) for Linux, Mac, and WSL [here](https://github.com/nvm-sh/nvm). For Windows users, refer to Microsoft's guide to [Install NodeJS on Windows](https://docs.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows).
-* Install n8n with:
-  ```
-  npm install n8n -g
-  ```
-* Recommended: follow n8n's guide to [set up your development environment](https://docs.n8n.io/integrations/creating-nodes/build/node-development-environment/).
+Or if using the N8N desktop app, install through the Community Nodes section.
 
-## Using this starter
+## Available Nodes
 
-These are the basic steps for working with the starter. For detailed guidance on creating and publishing nodes, refer to the [documentation](https://docs.n8n.io/integrations/creating-nodes/).
+### SmartLogger
 
-1. [Generate a new repository](https://github.com/n8n-io/n8n-nodes-starter/generate) from this template repository.
-2. Clone your new repo:
-   ```
-   git clone https://github.com/<your organization>/<your-repo-name>.git
-   ```
-3. Run `npm i` to install dependencies.
-4. Open the project in your editor.
-5. Browse the examples in `/nodes` and `/credentials`. Modify the examples, or replace them with your own nodes.
-6. Update the `package.json` to match your details.
-7. Run `npm run lint` to check for errors or `npm run lintfix` to automatically fix errors when possible.
-8. Test your node locally. Refer to [Run your node locally](https://docs.n8n.io/integrations/creating-nodes/test/run-node-locally/) for guidance.
-9. Replace this README with documentation for your node. Use the [README_TEMPLATE](README_TEMPLATE.md) to get started.
-10. Update the LICENSE file to use your details.
-11. [Publish](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry) your package to npm.
+Reads data from Huawei SmartLogger 3000 devices.
 
-## More information
+#### Operations
 
-Refer to our [documentation on creating nodes](https://docs.n8n.io/integrations/creating-nodes/) for detailed information on building your own nodes.
+1. **Read All Data** - Retrieve complete system data in one call
+2. **Read Power Data** - Get power monitoring data (active/reactive power, current, energy)
+3. **Read Environmental Data** - Get environmental sensors data (temperature, irradiance, wind)
+4. **Read System Info** - Get system information (datetime, location, DST settings)
+5. **Read Alarms** - Get alarm and status information
+6. **Discover Devices** - Scan for all connected devices on the Modbus network
+
+#### Configuration
+
+- **Host**: IP address of the SmartLogger (e.g., `192.168.1.10`)
+- **Port**: Modbus TCP port (default: `502`)
+- **Unit ID**: SmartLogger Modbus unit ID (default: `3` - not 0 as documented!)
+- **Connection Timeout**: Timeout in milliseconds (default: `5000`)
+- **Retry Attempts**: Number of retry attempts on failure (default: `3`)
+
+#### Discovery Options
+
+- **Discovery Range**: Unit IDs to scan (default: `1-247`)
+- **Discovery Timeout**: Shorter timeout for discovery operations (default: `2000ms`)
+- **Parallel Scan Count**: Number of simultaneous scans (default: `10`)
+
+## Example Output
+
+### Power Data
+```json
+{
+  "dcCurrentTotal": 125.6,
+  "inputPowerTotal": 87.3,
+  "activePowerTotal": 85.2,
+  "reactivePowerTotal": 12.5,
+  "powerFactor": 0.985,
+  "plantStatus": "Unlimited",
+  "totalEnergy": 524312.5,
+  "dailyEnergy": 312.7
+}
+```
+
+### Device Discovery
+```json
+{
+  "allDevices": [
+    {
+      "unitId": 3,
+      "deviceName": "SmartLogger 3000A",
+      "connectionStatus": "Online",
+      "portNumber": 1,
+      "deviceAddress": 3
+    },
+    {
+      "unitId": 12,
+      "deviceName": "100KTL-M2(COM3-12)",
+      "connectionStatus": "Online",
+      "portNumber": 3,
+      "deviceAddress": 12
+    }
+  ]
+}
+```
+
+## Important Notes
+
+### Critical Huawei-Specific Fixes Applied
+
+1. **Little-Endian Byte Order**: Despite documentation claiming big-endian, Huawei devices use little-endian
+2. **SmartLogger Unit ID**: Use unit ID `3` (not `0` as documented)
+3. **Gain Factors**: All proper gain factors are applied automatically
+
+### Known Compatible Devices
+
+- Huawei SmartLogger 3000/3000A
+- Huawei SUN2000 series inverters (100KTL-M2, etc.)
+- Environmental monitoring devices connected to SmartLogger
+
+## Troubleshooting
+
+### Discovery Taking Too Long?
+- Reduce the discovery range (e.g., `3,12-15` instead of `1-247`)
+- Increase parallel scan count (try `20` for faster scanning)
+- Decrease discovery timeout (try `1000ms` if network is reliable)
+
+### Getting Wrong Device Names?
+- Update to version 0.0.3 or later which fixes unit ID conflicts
+- Ensure only one N8N instance is accessing the device at a time
+
+### Connection Failed?
+- Verify SmartLogger IP address is correct
+- Check firewall allows port 502
+- Try unit ID `3` (not `0` or `1`)
+- Increase connection timeout if network is slow
+
+## Version History
+
+- **0.0.3** - Fixed parallel discovery unit ID conflicts
+- **0.0.2** - Added parallel discovery, removed redundant inverter section
+- **0.0.1** - Initial release with SmartLogger node
+
+## Contributing
+
+Issues and pull requests are welcome on [GitHub](https://github.com/Edward-Tollemache/n8n-nodes-huaweisolar).
 
 ## License
 
-[MIT](https://github.com/n8n-io/n8n-nodes-starter/blob/master/LICENSE.md)
+[MIT](LICENSE.md)
+
+## Credits
+
+Based on working Python implementation with critical fixes for Huawei's non-standard Modbus implementation.
