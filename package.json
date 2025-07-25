@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-huaweisolar",
-  "version": "0.0.002",
+  "version": "0.0.003",
   "description": "N8N nodes for reading data from Huawei SmartLogger 3000 and SUN2000 inverters via Modbus TCP",
   "keywords": [
     "n8n-community-node-package"
@@ -22,10 +22,10 @@
   "scripts": {
     "build": "npx rimraf dist && tsc && gulp build:icons",
     "dev": "tsc --watch",
-    "format": "prettier nodes credentials --write",
-    "lint": "eslint nodes credentials package.json",
-    "lintfix": "eslint nodes credentials package.json --fix",
-    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
+    "format": "prettier nodes --write",
+    "lint": "eslint nodes package.json",
+    "lintfix": "eslint nodes package.json --fix",
+    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes package.json"
   },
   "files": [
     "dist"

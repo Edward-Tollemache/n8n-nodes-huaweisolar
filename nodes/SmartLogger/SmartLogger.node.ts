@@ -145,18 +145,6 @@ export class SmartLogger implements INodeType {
 					},
 				},
 			},
-			{
-				displayName: 'Include Inverter Discovery',
-				name: 'includeInverters',
-				type: 'boolean',
-				default: true,
-				description: 'Whether to also discover connected SUN2000 inverters',
-				displayOptions: {
-					show: {
-						operation: ['readAll', 'discoverDevices'],
-					},
-				},
-			},
 		],
 	};
 
@@ -200,12 +188,6 @@ export class SmartLogger implements INodeType {
 					switch (operation) {
 						case 'readAll':
 							responseData = await smartLogger.readAllData();
-							
-							// Include inverter discovery if requested
-							const includeInverters = this.getNodeParameter('includeInverters', itemIndex, true) as boolean;
-							if (includeInverters) {
-								responseData.connectedInverters = await smartLogger.discoverInverters();
-							}
 							break;
 
 						case 'readPower':
@@ -242,11 +224,6 @@ export class SmartLogger implements INodeType {
 							
 							try {
 								responseData.allDevices = await discoveryLogger.discoverAllDevicesParallel(unitIds, parallelScans);
-								
-								const includeInvertersDiscover = this.getNodeParameter('includeInverters', itemIndex, true) as boolean;
-								if (includeInvertersDiscover) {
-									responseData.inverters = await discoveryLogger.discoverInvertersParallel([12, 13, 14, 15], parallelScans);
-								}
 							} finally {
 								await discoveryClient.disconnect();
 							}

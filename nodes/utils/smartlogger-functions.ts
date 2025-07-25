@@ -434,6 +434,7 @@ export class SmartLoggerFunctions {
 
 	/**
 	 * Discover all connected devices using parallel scanning (faster but more network intensive)
+	 * Creates separate client instances to avoid unit ID conflicts
 	 */
 	async discoverAllDevicesParallel(unitRange: number[] = Array.from({length: 247}, (_, i) => i + 1), concurrency: number = 10): Promise<DeviceInfo[]> {
 		const discovered: DeviceInfo[] = [];
@@ -443,27 +444,55 @@ export class SmartLoggerFunctions {
 			const batch = unitRange.slice(i, i + concurrency);
 			
 			const batchPromises = batch.map(async (unitId) => {
+				// Create a dedicated client for this unit ID to avoid conflicts
+				const { HuaweiModbusClient } = await import('./modbus-utils');
+				const originalConfig = this.client.getConfig();
+				const dedicatedClient = new HuaweiModbusClient({
+					...originalConfig,
+					unitId: unitId // Set the unit ID for this specific client
+				});
+				
 				try {
+					// Connect the dedicated client
+					const connected = await dedicatedClient.connect();
+					if (!connected) {
+						return null;
+					}
+
 					// Try to read device name first (most reliable public register)
-					const deviceName = await this.readDeviceName(unitId);
-					if (deviceName) {
-						// Get additional device info in parallel
-						const [connectionStatus, portNumber, deviceAddress] = await Promise.all([
-							this.readConnectionStatus(unitId),
-							this.readPortNumber(unitId),
-							this.readDeviceAddress(unitId)
+					const deviceNameResult = await dedicatedClient.readString(65524, 10, 20, unitId);
+					if (deviceNameResult.success && deviceNameResult.data) {
+						const deviceName = deviceNameResult.data;
+						
+						// Get additional device info in parallel using the dedicated client
+						const [connectionStatusResult, portNumberResult, deviceAddressResult] = await Promise.all([
+							dedicatedClient.readU16(65534, unitId),
+							dedicatedClient.readU16(65522, unitId),
+							dedicatedClient.readU16(65523, unitId)
 						]);
+
+						// Parse connection status
+						let connectionStatus: string | undefined;
+						if (connectionStatusResult.success && connectionStatusResult.data !== undefined) {
+							const statusValue = connectionStatusResult.data;
+							connectionStatus = statusValue === 0xB001 ? 'Online' : 
+											 statusValue === 0xB000 ? 'Offline' : 
+											 `Unknown (0x${statusValue.toString(16).toUpperCase()})`;
+						}
 
 						return {
 							unitId,
-							...(deviceName && { deviceName }),
+							deviceName,
 							...(connectionStatus && { connectionStatus }),
-							...(portNumber !== null && { portNumber }),
-							...(deviceAddress !== null && { deviceAddress })
+							...(portNumberResult.success && portNumberResult.data !== undefined && { portNumber: portNumberResult.data }),
+							...(deviceAddressResult.success && deviceAddressResult.data !== undefined && { deviceAddress: deviceAddressResult.data })
 						};
 					}
 				} catch (error) {
 					// Skip unresponsive units
+				} finally {
+					// Always disconnect the dedicated client
+					await dedicatedClient.disconnect();
 				}
 				return null;
 			});
@@ -515,6 +544,7 @@ export class SmartLoggerFunctions {
 
 	/**
 	 * Discover SUN2000 inverters using parallel scanning (faster)
+	 * Creates separate client instances to avoid unit ID conflicts
 	 */
 	async discoverInvertersParallel(unitRange: number[] = [12, 13, 14, 15], concurrency: number = 5): Promise<DeviceInfo[]> {
 		const inverters: DeviceInfo[] = [];
@@ -524,25 +554,55 @@ export class SmartLoggerFunctions {
 			const batch = unitRange.slice(i, i + concurrency);
 			
 			const batchPromises = batch.map(async (unitId) => {
+				// Create a dedicated client for this unit ID to avoid conflicts
+				const { HuaweiModbusClient } = await import('./modbus-utils');
+				const originalConfig = this.client.getConfig();
+				const dedicatedClient = new HuaweiModbusClient({
+					...originalConfig,
+					unitId: unitId // Set the unit ID for this specific client
+				});
+				
 				try {
-					const deviceName = await this.readDeviceName(unitId);
-					if (deviceName && deviceName.includes('SUN2000')) {
-						const [connectionStatus, portNumber, deviceAddress] = await Promise.all([
-							this.readConnectionStatus(unitId),
-							this.readPortNumber(unitId),
-							this.readDeviceAddress(unitId)
+					// Connect the dedicated client
+					const connected = await dedicatedClient.connect();
+					if (!connected) {
+						return null;
+					}
+
+					// Try to read device name first
+					const deviceNameResult = await dedicatedClient.readString(65524, 10, 20, unitId);
+					if (deviceNameResult.success && deviceNameResult.data && deviceNameResult.data.includes('SUN2000')) {
+						const deviceName = deviceNameResult.data;
+						
+						// Get additional device info in parallel using the dedicated client
+						const [connectionStatusResult, portNumberResult, deviceAddressResult] = await Promise.all([
+							dedicatedClient.readU16(65534, unitId),
+							dedicatedClient.readU16(65522, unitId),
+							dedicatedClient.readU16(65523, unitId)
 						]);
+
+						// Parse connection status
+						let connectionStatus: string | undefined;
+						if (connectionStatusResult.success && connectionStatusResult.data !== undefined) {
+							const statusValue = connectionStatusResult.data;
+							connectionStatus = statusValue === 0xB001 ? 'Online' : 
+											 statusValue === 0xB000 ? 'Offline' : 
+											 `Unknown (0x${statusValue.toString(16).toUpperCase()})`;
+						}
 
 						return {
 							unitId,
 							deviceName,
 							...(connectionStatus && { connectionStatus }),
-							...(portNumber !== null && { portNumber }),
-							...(deviceAddress !== null && { deviceAddress })
+							...(portNumberResult.success && portNumberResult.data !== undefined && { portNumber: portNumberResult.data }),
+							...(deviceAddressResult.success && deviceAddressResult.data !== undefined && { deviceAddress: deviceAddressResult.data })
 						};
 					}
 				} catch (error) {
 					// Skip unresponsive units
+				} finally {
+					// Always disconnect the dedicated client
+					await dedicatedClient.disconnect();
 				}
 				return null;
 			});
@@ -568,7 +628,6 @@ export class SmartLoggerFunctions {
 		power: SmartLoggerPowerData;
 		environmental: SmartLoggerEnvironmentalData;
 		alarms: SmartLoggerAlarmData;
-		connectedDevices?: DeviceInfo[];
 	}> {
 		const [system, power, environmental, alarms] = await Promise.all([
 			this.readSystemData(),

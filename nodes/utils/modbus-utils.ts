@@ -89,6 +89,13 @@ export class HuaweiModbusClient {
 	}
 
 	/**
+	 * Get the client configuration
+	 */
+	getConfig(): ModbusConnectionConfig {
+		return { ...this.config };
+	}
+
+	/**
 	 * Connect to Modbus TCP device
 	 */
 	async connect(): Promise<boolean> {
