@@ -4,7 +4,7 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionType, NodeOperationError, ApplicationError } from 'n8n-workflow';
 
 import { HuaweiModbusClient, ModbusConnectionConfig } from '../utils/modbus-utils';
 import { SmartLoggerFunctions } from '../utils/smartlogger-functions';
@@ -31,40 +31,40 @@ export class SmartLogger implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Read All Data',
-						value: 'readAll',
-						description: 'Read all available SmartLogger data (system, power, environmental, alarms)',
-						action: 'Read all SmartLogger data',
-					},
-					{
-						name: 'Read Power Data',
-						value: 'readPower',
-						description: 'Read power monitoring data (active/reactive power, current, energy)',
-						action: 'Read power data from SmartLogger',
-					},
-					{
-						name: 'Read Environmental Data',
-						value: 'readEnvironmental',
-						description: 'Read environmental monitoring data (temperature, irradiance, wind)',
-						action: 'Read environmental data from SmartLogger',
-					},
-					{
-						name: 'Read System Info',
-						value: 'readSystem',
-						description: 'Read system information (datetime, location, DST settings)',
-						action: 'Read system info from SmartLogger',
+						name: 'Discover Devices',
+						value: 'discoverDevices',
+						description: 'Discover all connected devices (inverters, meters, etc.)',
+						action: 'Discover connected devices',
 					},
 					{
 						name: 'Read Alarms',
 						value: 'readAlarms',
 						description: 'Read alarm and status information',
-						action: 'Read alarms from SmartLogger',
+						action: 'Read alarms from smart logger',
 					},
 					{
-						name: 'Discover Devices',
-						value: 'discoverDevices',
-						description: 'Discover all connected devices (inverters, meters, etc.)',
-						action: 'Discover connected devices',
+						name: 'Read All Data',
+						value: 'readAll',
+						description: 'Read all available SmartLogger data (system, power, environmental, alarms)',
+						action: 'Read all smart logger data',
+					},
+					{
+						name: 'Read Environmental Data',
+						value: 'readEnvironmental',
+						description: 'Read environmental monitoring data (temperature, irradiance, wind)',
+						action: 'Read environmental data from smart logger',
+					},
+					{
+						name: 'Read Power Data',
+						value: 'readPower',
+						description: 'Read power monitoring data (active/reactive power, current, energy)',
+						action: 'Read power data from smart logger',
+					},
+					{
+						name: 'Read System Info',
+						value: 'readSystem',
+						description: 'Read system information (datetime, location, DST settings)',
+						action: 'Read system info from smart logger',
 					},
 				],
 				default: 'readAll',
@@ -95,7 +95,7 @@ export class SmartLogger implements INodeType {
 				required: true,
 			},
 			{
-				displayName: 'Connection Timeout (ms)',
+				displayName: 'Connection Timeout (Ms)',
 				name: 'timeout',
 				type: 'number',
 				default: 5000,
@@ -169,7 +169,7 @@ export class SmartLogger implements INodeType {
 					// Connect to the device
 					const connected = await modbusClient.connect();
 					if (!connected) {
-						throw new Error(`Failed to connect to SmartLogger at ${host}:${port}`);
+						throw new ApplicationError(`Failed to connect to SmartLogger at ${host}:${port}`);
 					}
 
 					// Execute the requested operation
@@ -213,7 +213,7 @@ export class SmartLogger implements INodeType {
 							break;
 
 						default:
-							throw new Error(`Unknown operation: ${operation}`);
+							throw new ApplicationError(`Unknown operation: ${operation}`);
 					}
 
 					// Add metadata

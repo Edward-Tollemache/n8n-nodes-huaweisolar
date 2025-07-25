@@ -8,12 +8,12 @@
   "license": "MIT",
   "homepage": "",
   "author": {
-    "name": "",
-    "email": ""
+    "name": "Edward Tollemache",
+    "email": "Edward-Tollemache@users.noreply.github.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/<...>/n8n-nodes-<...>.git"
+    "url": "https://github.com/Edward-Tollemache/n8n-nodes-huaweisolar.git"
   },
   "engines": {
     "node": ">=20.15"
