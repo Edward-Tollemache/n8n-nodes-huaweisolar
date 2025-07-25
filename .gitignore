@@ -1,8 +1,39 @@
-node_modules
+# Project documentation and examples (not for distribution)
+claude.md
+EXAMPLE CODE/
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
 .DS_Store
-.tmp
-tmp
-dist
+Thumbs.db
+
+# Logs
+*.log
 npm-debug.log*
-yarn.lock
-.vscode/launch.json
+
+# Runtime data
+pids/
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
