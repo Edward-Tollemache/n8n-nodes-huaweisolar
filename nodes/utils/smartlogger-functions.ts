@@ -19,10 +19,12 @@ export interface SmartLoggerSystemData {
 export interface SmartLoggerPowerData {
 	dcCurrentTotal?: number;     // Total DC current (A)
 	inputPowerTotal?: number;    // Total input power (kW)
+	co2Reduction?: number;       // Total CO2 reduction (kg)
 	activePowerTotal?: number;   // Total active power (kW)
 	reactivePowerTotal?: number; // Total reactive power (kVar)
 	powerFactor?: number;        // System power factor
-	plantStatus?: string;        // Plant operational status
+	plantStatus?: string;        // Plant operational status (Qinghai)
+	plantStatusXinjiang?: string; // Plant status for Xinjiang region
 	totalEnergy?: number;        // Lifetime energy (kWh)
 	dailyEnergy?: number;        // Daily energy (kWh)
 }
@@ -128,6 +130,15 @@ export class SmartLoggerFunctions {
 	}
 
 	/**
+	 * Read total CO2 reduction
+	 * Registers: 40523-40524 (U32, gain=10)
+	 */
+	async readCO2Reduction(): Promise<number | null> {
+		const result = await this.client.readU32(40523, this.unitId);
+		return result.success ? result.data! / 10.0 : null;
+	}
+
+	/**
 	 * Read total active power output (AC)
 	 * Registers: 40525-40526 (I32, gain=1000)
 	 */
@@ -155,12 +166,34 @@ export class SmartLoggerFunctions {
 	}
 
 	/**
-	 * Read plant operational status
+	 * Read plant operational status (Qinghai region)
 	 * Register: 40543 (U16)
 	 */
 	async readPlantStatus(): Promise<string | null> {
 		const result = await this.client.readU16(40543, this.unitId);
 		return result.success ? parsePlantStatus(result.data!) : null;
+	}
+
+	/**
+	 * Read plant operational status (Xinjiang region)
+	 * Register: 40566 (U16)
+	 */
+	async readPlantStatusXinjiang(): Promise<string | null> {
+		const result = await this.client.readU16(40566, this.unitId);
+		if (!result.success || result.data === undefined) return null;
+		
+		// Parse Xinjiang-specific status codes
+		switch (result.data) {
+			case 0: return 'Idle';
+			case 1: return 'On-grid';
+			case 2: return 'On-grid with self-derating';
+			case 3: return 'On-grid with power limit';
+			case 4: return 'Planned outage';
+			case 5: return 'Power limit outage';
+			case 6: return 'Fault outage';
+			case 7: return 'Communication interrupt';
+			default: return `Unknown (${result.data})`;
+		}
 	}
 
 	/**
@@ -188,19 +221,23 @@ export class SmartLoggerFunctions {
 		const [
 			dcCurrentTotal,
 			inputPowerTotal,
+			co2Reduction,
 			activePowerTotal,
 			reactivePowerTotal,
 			powerFactor,
 			plantStatus,
+			plantStatusXinjiang,
 			totalEnergy,
 			dailyEnergy
 		] = await Promise.all([
 			this.readDcCurrentTotal(),
 			this.readInputPowerTotal(),
+			this.readCO2Reduction(),
 			this.readActivePowerTotal(),
 			this.readReactivePowerTotal(),
 			this.readPowerFactor(),
 			this.readPlantStatus(),
+			this.readPlantStatusXinjiang(),
 			this.readTotalEnergy(),
 			this.readDailyEnergy()
 		]);
@@ -208,10 +245,12 @@ export class SmartLoggerFunctions {
 		return {
 			...(dcCurrentTotal !== null && { dcCurrentTotal }),
 			...(inputPowerTotal !== null && { inputPowerTotal }),
+			...(co2Reduction !== null && { co2Reduction }),
 			...(activePowerTotal !== null && { activePowerTotal }),
 			...(reactivePowerTotal !== null && { reactivePowerTotal }),
 			...(powerFactor !== null && { powerFactor }),
 			...(plantStatus !== null && { plantStatus }),
+			...(plantStatusXinjiang !== null && { plantStatusXinjiang }),
 			...(totalEnergy !== null && { totalEnergy }),
 			...(dailyEnergy !== null && { dailyEnergy })
 		};

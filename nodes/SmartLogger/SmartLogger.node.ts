@@ -31,43 +31,53 @@ export class SmartLogger implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
+						name: 'Read Data',
+						value: 'readData',
+						description: 'Read selected data from SmartLogger',
+						action: 'Read data from smart logger',
+					},
+					{
 						name: 'Discover Devices',
 						value: 'discoverDevices',
 						description: 'Discover all connected devices (inverters, meters, etc.)',
 						action: 'Discover connected devices',
 					},
+				],
+				default: 'readData',
+			},
+			{
+				displayName: 'Data to Read',
+				name: 'dataCategories',
+				type: 'multiOptions',
+				displayOptions: {
+					show: {
+						operation: ['readData'],
+					},
+				},
+				options: [
 					{
-						name: 'Read Alarms',
-						value: 'readAlarms',
-						description: 'Read alarm and status information',
-						action: 'Read alarms from smart logger',
+						name: 'System Information',
+						value: 'system',
+						description: 'Date/time, location, DST settings',
 					},
 					{
-						name: 'Read All Data',
-						value: 'readAll',
-						description: 'Read all available SmartLogger data (system, power, environmental, alarms)',
-						action: 'Read all smart logger data',
+						name: 'Power Data',
+						value: 'power',
+						description: 'Active/reactive power, current, energy, CO2 reduction',
 					},
 					{
-						name: 'Read Environmental Data',
-						value: 'readEnvironmental',
-						description: 'Read environmental monitoring data (temperature, irradiance, wind)',
-						action: 'Read environmental data from smart logger',
+						name: 'Environmental Data',
+						value: 'environmental',
+						description: 'Temperature, irradiance, wind speed/direction',
 					},
 					{
-						name: 'Read Power Data',
-						value: 'readPower',
-						description: 'Read power monitoring data (active/reactive power, current, energy)',
-						action: 'Read power data from smart logger',
-					},
-					{
-						name: 'Read System Info',
-						value: 'readSystem',
-						description: 'Read system information (datetime, location, DST settings)',
-						action: 'Read system info from smart logger',
+						name: 'Alarms',
+						value: 'alarms',
+						description: 'System alarms and status information',
 					},
 				],
-				default: 'readAll',
+				default: ['power'],
+				description: 'Select which data categories to read from the SmartLogger',
 			},
 			{
 				displayName: 'Host',
@@ -186,24 +196,40 @@ export class SmartLogger implements INodeType {
 
 					// Execute the requested operation
 					switch (operation) {
-						case 'readAll':
-							responseData = await smartLogger.readAllData();
-							break;
-
-						case 'readPower':
-							responseData = await smartLogger.readPowerData();
-							break;
-
-						case 'readEnvironmental':
-							responseData = await smartLogger.readEnvironmentalData();
-							break;
-
-						case 'readSystem':
-							responseData = await smartLogger.readSystemData();
-							break;
-
-						case 'readAlarms':
-							responseData = await smartLogger.readAlarmData();
+						case 'readData':
+							const dataCategories = this.getNodeParameter('dataCategories', itemIndex, ['power']) as string[];
+							responseData = {};
+							
+							// Read selected data categories in parallel
+							const promises = [];
+							const categories = [];
+							
+							if (dataCategories.includes('system')) {
+								promises.push(smartLogger.readSystemData());
+								categories.push('system');
+							}
+							
+							if (dataCategories.includes('power')) {
+								promises.push(smartLogger.readPowerData());
+								categories.push('power');
+							}
+							
+							if (dataCategories.includes('environmental')) {
+								promises.push(smartLogger.readEnvironmentalData());
+								categories.push('environmental');
+							}
+							
+							if (dataCategories.includes('alarms')) {
+								promises.push(smartLogger.readAlarmData());
+								categories.push('alarms');
+							}
+							
+							const results = await Promise.all(promises);
+							
+							// Map results back to their categories
+							for (let i = 0; i < categories.length; i++) {
+								responseData[categories[i]] = results[i];
+							}
 							break;
 
 						case 'discoverDevices':
