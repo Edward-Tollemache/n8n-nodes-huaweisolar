@@ -398,7 +398,7 @@ export class SmartLoggerFunctions {
 	}
 
 	/**
-	 * Discover all connected devices by scanning unit IDs
+	 * Discover all connected devices by scanning unit IDs (sequential - slower but safer)
 	 */
 	async discoverAllDevices(unitRange: number[] = Array.from({length: 247}, (_, i) => i + 1)): Promise<DeviceInfo[]> {
 		const discovered: DeviceInfo[] = [];
@@ -433,7 +433,56 @@ export class SmartLoggerFunctions {
 	}
 
 	/**
-	 * Discover SUN2000 inverters specifically (typically units 12-15)
+	 * Discover all connected devices using parallel scanning (faster but more network intensive)
+	 */
+	async discoverAllDevicesParallel(unitRange: number[] = Array.from({length: 247}, (_, i) => i + 1), concurrency: number = 10): Promise<DeviceInfo[]> {
+		const discovered: DeviceInfo[] = [];
+		
+		// Process units in batches to limit concurrent connections
+		for (let i = 0; i < unitRange.length; i += concurrency) {
+			const batch = unitRange.slice(i, i + concurrency);
+			
+			const batchPromises = batch.map(async (unitId) => {
+				try {
+					// Try to read device name first (most reliable public register)
+					const deviceName = await this.readDeviceName(unitId);
+					if (deviceName) {
+						// Get additional device info in parallel
+						const [connectionStatus, portNumber, deviceAddress] = await Promise.all([
+							this.readConnectionStatus(unitId),
+							this.readPortNumber(unitId),
+							this.readDeviceAddress(unitId)
+						]);
+
+						return {
+							unitId,
+							...(deviceName && { deviceName }),
+							...(connectionStatus && { connectionStatus }),
+							...(portNumber !== null && { portNumber }),
+							...(deviceAddress !== null && { deviceAddress })
+						};
+					}
+				} catch (error) {
+					// Skip unresponsive units
+				}
+				return null;
+			});
+
+			const batchResults = await Promise.all(batchPromises);
+			
+			// Add successful discoveries to results
+			for (const result of batchResults) {
+				if (result) {
+					discovered.push(result);
+				}
+			}
+		}
+
+		return discovered;
+	}
+
+	/**
+	 * Discover SUN2000 inverters specifically (typically units 12-15) - sequential
 	 */
 	async discoverInverters(unitRange: number[] = [12, 13, 14, 15]): Promise<DeviceInfo[]> {
 		const inverters: DeviceInfo[] = [];
@@ -458,6 +507,53 @@ export class SmartLoggerFunctions {
 				}
 			} catch (error) {
 				continue;
+			}
+		}
+
+		return inverters;
+	}
+
+	/**
+	 * Discover SUN2000 inverters using parallel scanning (faster)
+	 */
+	async discoverInvertersParallel(unitRange: number[] = [12, 13, 14, 15], concurrency: number = 5): Promise<DeviceInfo[]> {
+		const inverters: DeviceInfo[] = [];
+		
+		// Process units in batches
+		for (let i = 0; i < unitRange.length; i += concurrency) {
+			const batch = unitRange.slice(i, i + concurrency);
+			
+			const batchPromises = batch.map(async (unitId) => {
+				try {
+					const deviceName = await this.readDeviceName(unitId);
+					if (deviceName && deviceName.includes('SUN2000')) {
+						const [connectionStatus, portNumber, deviceAddress] = await Promise.all([
+							this.readConnectionStatus(unitId),
+							this.readPortNumber(unitId),
+							this.readDeviceAddress(unitId)
+						]);
+
+						return {
+							unitId,
+							deviceName,
+							...(connectionStatus && { connectionStatus }),
+							...(portNumber !== null && { portNumber }),
+							...(deviceAddress !== null && { deviceAddress })
+						};
+					}
+				} catch (error) {
+					// Skip unresponsive units
+				}
+				return null;
+			});
+
+			const batchResults = await Promise.all(batchPromises);
+			
+			// Add successful discoveries to results
+			for (const result of batchResults) {
+				if (result) {
+					inverters.push(result);
+				}
 			}
 		}
 

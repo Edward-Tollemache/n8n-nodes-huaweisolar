@@ -112,9 +112,33 @@ export class SmartLogger implements INodeType {
 				displayName: 'Discovery Range',
 				name: 'discoveryRange',
 				type: 'string',
-				default: '1-15,21-30',
+				default: '1-247',
 				placeholder: '1-15,21-30 or 12,13,14,15',
 				description: 'Unit ID ranges to scan for device discovery (comma-separated ranges or individual IDs)',
+				displayOptions: {
+					show: {
+						operation: ['discoverDevices'],
+					},
+				},
+			},
+			{
+				displayName: 'Discovery Timeout (Ms)',
+				name: 'discoveryTimeout',
+				type: 'number',
+				default: 2000,
+				description: 'Shorter timeout for device discovery to speed up scanning',
+				displayOptions: {
+					show: {
+						operation: ['discoverDevices'],
+					},
+				},
+			},
+			{
+				displayName: 'Parallel Scan Count',
+				name: 'parallelScans',
+				type: 'number',
+				default: 10,
+				description: 'Number of devices to scan simultaneously (higher = faster but more network load)',
 				displayOptions: {
 					show: {
 						operation: ['discoverDevices'],
@@ -201,14 +225,30 @@ export class SmartLogger implements INodeType {
 							break;
 
 						case 'discoverDevices':
-							const discoveryRange = this.getNodeParameter('discoveryRange', itemIndex, '1-15,21-30') as string;
+							const discoveryRange = this.getNodeParameter('discoveryRange', itemIndex, '1-247') as string;
+							const discoveryTimeout = this.getNodeParameter('discoveryTimeout', itemIndex, 2000) as number;
+							const parallelScans = this.getNodeParameter('parallelScans', itemIndex, 10) as number;
 							const unitIds = SmartLogger.parseDiscoveryRange(discoveryRange);
 							
-							responseData.allDevices = await smartLogger.discoverAllDevices(unitIds);
+							// Create a separate client config for discovery with shorter timeout
+							const discoveryConfig: ModbusConnectionConfig = {
+								...config,
+								timeout: discoveryTimeout,
+								retries: 1 // Fewer retries for discovery
+							};
 							
-							const includeInvertersDiscover = this.getNodeParameter('includeInverters', itemIndex, true) as boolean;
-							if (includeInvertersDiscover) {
-								responseData.inverters = await smartLogger.discoverInverters();
+							const discoveryClient = new HuaweiModbusClient(discoveryConfig);
+							const discoveryLogger = new SmartLoggerFunctions(discoveryClient, unitId);
+							
+							try {
+								responseData.allDevices = await discoveryLogger.discoverAllDevicesParallel(unitIds, parallelScans);
+								
+								const includeInvertersDiscover = this.getNodeParameter('includeInverters', itemIndex, true) as boolean;
+								if (includeInvertersDiscover) {
+									responseData.inverters = await discoveryLogger.discoverInvertersParallel([12, 13, 14, 15], parallelScans);
+								}
+							} finally {
+								await discoveryClient.disconnect();
 							}
 							break;
 
