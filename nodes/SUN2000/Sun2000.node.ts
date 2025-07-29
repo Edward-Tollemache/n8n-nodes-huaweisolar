@@ -115,7 +115,7 @@ export class Sun2000 implements INodeType {
 				name: 'alwaysIncludeAlarmTexts',
 				type: 'boolean',
 				default: false,
-				description: 'Always include alarmTexts field in output, even when empty (for consistent packet structure)',
+				description: 'Whether to always include alarmTexts field in output, even when empty (for consistent packet structure)',
 			},
 			{
 				displayName: 'Host',
