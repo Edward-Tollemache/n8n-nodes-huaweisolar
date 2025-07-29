@@ -45,6 +45,12 @@ export class Sun2000 implements INodeType {
 						description: 'Read data from inverters found by SmartLogger discovery',
 						action: 'Read data from discovered inverters',
 					},
+					{
+						name: 'Specify Devices',
+						value: 'specifyDevices',
+						description: 'Manually specify inverter device addresses',
+						action: 'Read data from specified devices',
+					},
 				],
 				default: 'readFromDiscovery',
 			},
@@ -54,6 +60,76 @@ export class Sun2000 implements INodeType {
 				type: 'boolean',
 				default: true,
 				description: 'Whether to only read data from devices that contain "SUN2000" in their name',
+				displayOptions: {
+					show: {
+						operation: ['readFromDiscovery'],
+					},
+				},
+			},
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: '192.168.1.10',
+				placeholder: '192.168.1.10',
+				description: 'IP address or hostname of the SmartLogger device',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['specifyDevices'],
+					},
+				},
+			},
+			{
+				displayName: 'Port',
+				name: 'port',
+				type: 'number',
+				default: 502,
+				description: 'Modbus TCP port (default: 502)',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['specifyDevices'],
+					},
+				},
+			},
+			{
+				displayName: 'Inverter Addresses',
+				name: 'inverterAddresses',
+				type: 'string',
+				default: '12,13,14,15',
+				placeholder: '12,13,14,15 or 12-15 or 1-2,6,8',
+				description: 'Comma-separated inverter device addresses or ranges',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['specifyDevices'],
+					},
+				},
+			},
+			{
+				displayName: 'Connection Timeout (Ms)',
+				name: 'timeout',
+				type: 'number',
+				default: 5000,
+				description: 'Connection timeout in milliseconds',
+				displayOptions: {
+					show: {
+						operation: ['specifyDevices'],
+					},
+				},
+			},
+			{
+				displayName: 'Retry Attempts',
+				name: 'retries',
+				type: 'number',
+				default: 3,
+				description: 'Number of retry attempts on connection failure',
+				displayOptions: {
+					show: {
+						operation: ['specifyDevices'],
+					},
+				},
 			},
 		],
 	};
@@ -129,6 +205,51 @@ export class Sun2000 implements INodeType {
 							await modbusClient.disconnect();
 						}
 					}
+				} else if (operation === 'specifyDevices') {
+					// Manual device specification mode
+					const host = this.getNodeParameter('host', itemIndex) as string;
+					const port = this.getNodeParameter('port', itemIndex) as number;
+					const inverterAddresses = this.getNodeParameter('inverterAddresses', itemIndex) as string;
+					const timeout = this.getNodeParameter('timeout', itemIndex, 5000) as number;
+					const retries = this.getNodeParameter('retries', itemIndex, 3) as number;
+
+					// Parse inverter addresses
+					const addresses = Sun2000.parseAddressList(inverterAddresses);
+					if (addresses.length === 0) {
+						throw new ApplicationError('No valid inverter addresses specified. Please provide addresses like "12,13,14,15" or "12-15".');
+					}
+
+					// Convert addresses to device objects
+					const devices = addresses.map((addr: number) => ({
+						unitId: addr,
+						deviceAddress: addr,
+						deviceName: `Inverter-${addr}`
+					}));
+
+					// Connect and read data
+					const config: ModbusConnectionConfig = {
+						host,
+						port,
+						unitId: 0, // Use unit ID 0 for remapped register access
+						timeout,
+						retries,
+					};
+
+					const modbusClient = new HuaweiModbusClient(config);
+					const sun2000 = new SUN2000Functions(modbusClient);
+
+					try {
+						const connected = await modbusClient.connect();
+						if (!connected) {
+							throw new ApplicationError(`Failed to connect to SmartLogger at ${host}:${port}`);
+						}
+
+						// Read data from specified inverters
+						responseData.inverters = await sun2000.readMultipleInverters(devices);
+
+					} finally {
+						await modbusClient.disconnect();
+					}
 				}
 
 				// Add metadata
@@ -166,5 +287,38 @@ export class Sun2000 implements INodeType {
 		}
 
 		return [returnData];
+	}
+
+	/**
+	 * Parse address list string into array of numbers
+	 * Examples: "12,13,14,15" -> [12,13,14,15]
+	 *           "12-15" -> [12,13,14,15]
+	 *           "1-2,6,8" -> [1,2,6,8]
+	 */
+	private static parseAddressList(addressString: string): number[] {
+		const addresses: number[] = [];
+		const parts = addressString.split(',').map(s => s.trim());
+
+		for (const part of parts) {
+			if (part.includes('-')) {
+				// Handle range like "12-15"
+				const [start, end] = part.split('-').map(Number);
+				if (!isNaN(start) && !isNaN(end) && start <= end) {
+					for (let i = start; i <= end; i++) {
+						if (i >= 1 && i <= 247) {
+							addresses.push(i);
+						}
+					}
+				}
+			} else {
+				// Handle individual address like "12"
+				const addr = Number(part);
+				if (!isNaN(addr) && addr >= 1 && addr <= 247) {
+					addresses.push(addr);
+				}
+			}
+		}
+
+		return [...new Set(addresses)].sort((a, b) => a - b);
 	}
 }
