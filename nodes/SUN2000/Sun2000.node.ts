@@ -67,6 +67,50 @@ export class Sun2000 implements INodeType {
 				},
 			},
 			{
+				displayName: 'Data Categories',
+				name: 'dataCategories',
+				type: 'multiOptions',
+				options: [
+					{
+						name: 'Device Information',
+						value: 'device',
+						description: 'Model, serial number, firmware version, rated power',
+					},
+					{
+						name: 'Power & Energy',
+						value: 'power',
+						description: 'Active/reactive power, efficiency, daily/total energy',
+					},
+					{
+						name: 'Grid Voltages',
+						value: 'voltages',
+						description: 'AC line voltages (UAB, UBC, UCA) and phase voltages',
+					},
+					{
+						name: 'Grid Currents',
+						value: 'currents',
+						description: 'AC phase currents and grid frequency',
+					},
+					{
+						name: 'PV String Data',
+						value: 'strings',
+						description: 'DC voltages and currents for each PV string',
+					},
+					{
+						name: 'Status & Temperature',
+						value: 'status',
+						description: 'Device status, running state, temperature readings',
+					},
+					{
+						name: 'Alarms & Faults',
+						value: 'alarms',
+						description: 'Alarm registers with decoded error messages',
+					},
+				],
+				default: ['power', 'voltages', 'status'],
+				description: 'Select which data categories to read from inverters',
+			},
+			{
 				displayName: 'Host',
 				name: 'host',
 				type: 'string',
@@ -142,6 +186,7 @@ export class Sun2000 implements INodeType {
 			try {
 				const operation = this.getNodeParameter('operation', itemIndex) as string;
 				const filterInverters = this.getNodeParameter('filterInverters', itemIndex, true) as boolean;
+				const dataCategories = this.getNodeParameter('dataCategories', itemIndex, ['power', 'voltages', 'status']) as string[];
 
 				let responseData: any = {};
 
@@ -199,7 +244,7 @@ export class Sun2000 implements INodeType {
 							}
 
 							// Read data from all discovered inverters
-							responseData.inverters = await sun2000.readMultipleInverters(discoveredDevices);
+							responseData.inverters = await sun2000.readMultipleInverters(discoveredDevices, dataCategories);
 
 						} finally {
 							await modbusClient.disconnect();
@@ -245,7 +290,7 @@ export class Sun2000 implements INodeType {
 						}
 
 						// Read data from specified inverters
-						responseData.inverters = await sun2000.readMultipleInverters(devices);
+						responseData.inverters = await sun2000.readMultipleInverters(devices, dataCategories);
 
 					} finally {
 						await modbusClient.disconnect();
