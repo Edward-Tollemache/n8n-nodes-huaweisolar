@@ -488,7 +488,7 @@ export class SUN2000Functions {
 	 * Read comprehensive inverter data using direct register access
 	 * Combines basic remapped data with enhanced direct register data
 	 */
-	async readInverterData(deviceAddress: number, deviceName?: string, dataCategories?: string[]): Promise<SUN2000InverterData> {
+	async readInverterData(deviceAddress: number, deviceName?: string, dataCategories?: string[], alwaysIncludeAlarmTexts?: boolean): Promise<SUN2000InverterData> {
 		const result: SUN2000InverterData = {
 			unitId: deviceAddress,
 			...(deviceName && { deviceName })
@@ -595,7 +595,9 @@ export class SUN2000Functions {
 				if (alarms.alarm1 !== undefined) result.alarm1 = alarms.alarm1;
 				if (alarms.alarm2 !== undefined) result.alarm2 = alarms.alarm2;
 				if (alarms.alarm3 !== undefined) result.alarm3 = alarms.alarm3;
-				if (alarms.alarmTexts && alarms.alarmTexts.length > 0) result.alarmTexts = alarms.alarmTexts;
+				if (alwaysIncludeAlarmTexts || (alarms.alarmTexts && alarms.alarmTexts.length > 0)) {
+					result.alarmTexts = alarms.alarmTexts || [];
+				}
 				if (faultCode !== null) result.faultCode = faultCode;
 			}
 
@@ -681,14 +683,15 @@ export class SUN2000Functions {
 	 */
 	async readMultipleInverters(
 		devices: Array<{unitId: number, deviceAddress: number, deviceName?: string}>,
-		dataCategories?: string[]
+		dataCategories?: string[],
+		alwaysIncludeAlarmTexts?: boolean
 	): Promise<SUN2000InverterData[]> {
 		const results: SUN2000InverterData[] = [];
 
 		// Process inverters one by one to be safe
 		for (const device of devices) {
 			try {
-				const inverterData = await this.readInverterData(device.deviceAddress, device.deviceName, dataCategories);
+				const inverterData = await this.readInverterData(device.deviceAddress, device.deviceName, dataCategories, alwaysIncludeAlarmTexts);
 				results.push(inverterData);
 				
 				// Small delay between inverters to be gentle on the network

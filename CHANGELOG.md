@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.010] - 2025-07-29
+### Added
+- "Always Include Alarm Texts" toggle option for consistent packet structure
+- Option to include empty alarmTexts array even when no alarms are active
+- Improved API consistency for downstream data processing
+
+### Enhanced
+- SUN2000 node UI with new boolean parameter for alarm text behavior
+- Method signatures updated to support alarm text inclusion preference
+- Better support for data analysis workflows requiring consistent output structure
+
 ## [0.0.009] - 2025-07-29
 ### Added
 - Comprehensive direct register access for SUN2000 inverters

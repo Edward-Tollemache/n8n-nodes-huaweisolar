@@ -111,6 +111,13 @@ export class Sun2000 implements INodeType {
 				description: 'Select which data categories to read from inverters',
 			},
 			{
+				displayName: 'Always Include Alarm Texts',
+				name: 'alwaysIncludeAlarmTexts',
+				type: 'boolean',
+				default: false,
+				description: 'Always include alarmTexts field in output, even when empty (for consistent packet structure)',
+			},
+			{
 				displayName: 'Host',
 				name: 'host',
 				type: 'string',
@@ -187,6 +194,7 @@ export class Sun2000 implements INodeType {
 				const operation = this.getNodeParameter('operation', itemIndex) as string;
 				const filterInverters = this.getNodeParameter('filterInverters', itemIndex, true) as boolean;
 				const dataCategories = this.getNodeParameter('dataCategories', itemIndex, ['power', 'voltages', 'status']) as string[];
+				const alwaysIncludeAlarmTexts = this.getNodeParameter('alwaysIncludeAlarmTexts', itemIndex, false) as boolean;
 
 				let responseData: any = {};
 
@@ -244,7 +252,7 @@ export class Sun2000 implements INodeType {
 							}
 
 							// Read data from all discovered inverters
-							responseData.inverters = await sun2000.readMultipleInverters(discoveredDevices, dataCategories);
+							responseData.inverters = await sun2000.readMultipleInverters(discoveredDevices, dataCategories, alwaysIncludeAlarmTexts);
 
 						} finally {
 							await modbusClient.disconnect();
@@ -290,7 +298,7 @@ export class Sun2000 implements INodeType {
 						}
 
 						// Read data from specified inverters
-						responseData.inverters = await sun2000.readMultipleInverters(devices, dataCategories);
+						responseData.inverters = await sun2000.readMultipleInverters(devices, dataCategories, alwaysIncludeAlarmTexts);
 
 					} finally {
 						await modbusClient.disconnect();
