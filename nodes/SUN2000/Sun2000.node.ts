@@ -72,14 +72,19 @@ export class Sun2000 implements INodeType {
 				type: 'multiOptions',
 				options: [
 					{
+						name: 'Alarms & Faults',
+						value: 'alarms',
+						description: 'Alarm registers with decoded error messages',
+					},
+					{
 						name: 'Device Information',
 						value: 'device',
 						description: 'Model, serial number, firmware version, rated power',
 					},
 					{
-						name: 'Power & Energy',
-						value: 'power',
-						description: 'Active/reactive power, efficiency, daily/total energy',
+						name: 'Grid Currents',
+						value: 'currents',
+						description: 'AC phase currents and grid frequency',
 					},
 					{
 						name: 'Grid Voltages',
@@ -87,9 +92,9 @@ export class Sun2000 implements INodeType {
 						description: 'AC line voltages (UAB, UBC, UCA) and phase voltages',
 					},
 					{
-						name: 'Grid Currents',
-						value: 'currents',
-						description: 'AC phase currents and grid frequency',
+						name: 'Power & Energy',
+						value: 'power',
+						description: 'Active/reactive power, efficiency, daily/total energy',
 					},
 					{
 						name: 'PV String Data',
@@ -100,11 +105,6 @@ export class Sun2000 implements INodeType {
 						name: 'Status & Temperature',
 						value: 'status',
 						description: 'Device status, running state, temperature readings',
-					},
-					{
-						name: 'Alarms & Faults',
-						value: 'alarms',
-						description: 'Alarm registers with decoded error messages',
 					},
 				],
 				default: ['power', 'voltages', 'status'],
