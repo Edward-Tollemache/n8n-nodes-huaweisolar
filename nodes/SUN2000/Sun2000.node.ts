@@ -18,6 +18,11 @@ interface DeviceDiscoveryInput {
 	portNumber?: number;
 }
 
+interface DeviceNameMapping {
+	address: number;
+	customName: string;
+}
+
 export class Sun2000 implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Huawei SUN2000 Inverter',
@@ -182,6 +187,57 @@ export class Sun2000 implements INodeType {
 					},
 				},
 			},
+			{
+				displayName: 'Custom Inverter Names',
+				name: 'useCustomNames',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to enable custom naming for inverters instead of auto-generated names',
+				displayOptions: {
+					show: {
+						operation: ['specifyDevices'],
+					},
+				},
+			},
+			{
+				displayName: 'Device Name Mappings',
+				name: 'deviceNameMappings',
+				type: 'fixedCollection',
+				typeOptions: {
+					multipleValues: true,
+				},
+				default: {},
+				options: [
+					{
+						name: 'mappings',
+						displayName: 'Name Mapping',
+						values: [
+							{
+								displayName: 'Inverter Address',
+								name: 'address',
+								type: 'number',
+								default: 12,
+								placeholder: '12',
+								description: 'The inverter unit ID/address to rename',
+							},
+							{
+								displayName: 'Custom Name',
+								name: 'customName',
+								type: 'string',
+								default: '',
+								placeholder: 'Solar Panel East',
+								description: 'Custom name for this inverter',
+							},
+						],
+					},
+				],
+				displayOptions: {
+					show: {
+						operation: ['specifyDevices'],
+						useCustomNames: [true],
+					},
+				},
+			},
 		],
 	};
 
@@ -265,6 +321,8 @@ export class Sun2000 implements INodeType {
 					const inverterAddresses = this.getNodeParameter('inverterAddresses', itemIndex) as string;
 					const timeout = this.getNodeParameter('timeout', itemIndex, 5000) as number;
 					const retries = this.getNodeParameter('retries', itemIndex, 3) as number;
+					const useCustomNames = this.getNodeParameter('useCustomNames', itemIndex, false) as boolean;
+					const deviceNameMappings = this.getNodeParameter('deviceNameMappings', itemIndex, {}) as { mappings?: DeviceNameMapping[] };
 
 					// Parse inverter addresses
 					const addresses = Sun2000.parseAddressList(inverterAddresses);
@@ -273,11 +331,23 @@ export class Sun2000 implements INodeType {
 					}
 
 					// Convert addresses to device objects
-					const devices = addresses.map((addr: number) => ({
-						unitId: addr,
-						deviceAddress: addr,
-						deviceName: `Inverter-${addr}`
-					}));
+					const devices = addresses.map((addr: number) => {
+						let deviceName = `Inverter-${addr}`; // Default name
+						
+						// Apply custom naming if enabled
+						if (useCustomNames && deviceNameMappings?.mappings) {
+							const mapping = deviceNameMappings.mappings.find(m => m.address === addr);
+							if (mapping?.customName) {
+								deviceName = mapping.customName;
+							}
+						}
+						
+						return {
+							unitId: addr,
+							deviceAddress: addr,
+							deviceName
+						};
+					});
 
 					// Connect and read data
 					const config: ModbusConnectionConfig = {
