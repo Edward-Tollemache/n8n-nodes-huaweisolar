@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-huaweisolar",
-  "version": "0.0.011",
+  "version": "0.0.012",
   "description": "N8N nodes for reading data from Huawei SmartLogger 3000 and SUN2000 inverters via Modbus TCP",
   "keywords": [
     "n8n-community-node-package"

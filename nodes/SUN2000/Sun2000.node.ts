@@ -123,6 +123,26 @@ export class Sun2000 implements INodeType {
 				description: 'Whether to always include alarmTexts field in output, even when empty (for consistent packet structure)',
 			},
 			{
+				displayName: 'Field Naming Convention',
+				name: 'namingConvention',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'Descriptive',
+						value: 'descriptive',
+						description: 'Use descriptive field names (e.g., activePower, phaseAVoltage)',
+					},
+					{
+						name: 'IEC 61850',
+						value: 'iec61850',
+						description: 'Use IEC 61850 standard field names (e.g., P, Ua)',
+					},
+				],
+				default: 'descriptive',
+				description: 'Choose output field naming: Descriptive or IEC 61850 standard',
+			},
+			{
 				displayName: 'Host',
 				name: 'host',
 				type: 'string',
@@ -251,6 +271,8 @@ export class Sun2000 implements INodeType {
 				const filterInverters = this.getNodeParameter('filterInverters', itemIndex, true) as boolean;
 				const dataCategories = this.getNodeParameter('dataCategories', itemIndex, ['power', 'voltages', 'status']) as string[];
 				const alwaysIncludeAlarmTexts = this.getNodeParameter('alwaysIncludeAlarmTexts', itemIndex, false) as boolean;
+				const namingConvention = this.getNodeParameter('namingConvention', itemIndex, 'descriptive') as string;
+				const useIEC = namingConvention === 'iec61850';
 
 				let responseData: any = {};
 
@@ -308,7 +330,7 @@ export class Sun2000 implements INodeType {
 							}
 
 							// Read data from all discovered inverters
-							responseData.inverters = await sun2000.readMultipleInverters(discoveredDevices, dataCategories, alwaysIncludeAlarmTexts);
+							responseData.inverters = await sun2000.readMultipleInverters(discoveredDevices, dataCategories, alwaysIncludeAlarmTexts, useIEC);
 
 						} finally {
 							await modbusClient.disconnect();
@@ -368,7 +390,7 @@ export class Sun2000 implements INodeType {
 						}
 
 						// Read data from specified inverters
-						responseData.inverters = await sun2000.readMultipleInverters(devices, dataCategories, alwaysIncludeAlarmTexts);
+						responseData.inverters = await sun2000.readMultipleInverters(devices, dataCategories, alwaysIncludeAlarmTexts, useIEC);
 
 					} finally {
 						await modbusClient.disconnect();

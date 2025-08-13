@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.012] - 2025-08-13
+### Added
+- Field Naming Convention toggle for both SmartLogger and SUN2000 nodes
+- IEC 61850 standard naming support alongside descriptive field names
+- Comprehensive field mapping for electrical parameters (P, Q, Ua, Ia, etc.)
+- Zero-overhead performance implementation using direct field assignment
+- Updated API documentation with field mapping reference and examples
+
+### Enhanced
+- Professional integration support with IEC 61850 standard field names
+- Backward compatible with default descriptive naming
+- Complete PV string naming support (voltage→U, current→I, power→P)
+- Temperature field standardization (TempInt, TempCab, TempPV, TempAmb)
+- Power and energy field alignment with international standards
+
 ## [0.0.010] - 2025-07-29
 ### Added
 - "Always Include Alarm Texts" toggle option for consistent packet structure

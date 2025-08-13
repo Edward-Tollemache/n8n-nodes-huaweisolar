@@ -3,11 +3,80 @@
 This document provides a comprehensive guide to the JSON output structures and data formats returned by the Huawei SmartLogger and SUN2000 inverter N8N nodes.
 
 ## Table of Contents
-1. [SmartLogger Node Output](#smartlogger-node-output)
-2. [SUN2000 Inverter Node Output](#sun2000-inverter-node-output)
-3. [Alarm System Reference](#alarm-system-reference)
-4. [Data Types and Units](#data-types-and-units)
-5. [Practical Examples](#practical-examples)
+1. [Field Naming Conventions](#field-naming-conventions)
+2. [SmartLogger Node Output](#smartlogger-node-output)
+3. [SUN2000 Inverter Node Output](#sun2000-inverter-node-output)
+4. [Alarm System Reference](#alarm-system-reference)
+5. [Data Types and Units](#data-types-and-units)
+6. [Practical Examples](#practical-examples)
+
+---
+
+## Field Naming Conventions
+
+Both SmartLogger and SUN2000 nodes support two field naming conventions that can be selected via the **Field Naming Convention** parameter:
+
+### Descriptive Naming (Default)
+Uses human-readable field names for easier understanding and debugging:
+```json
+{
+  "activePower": 79.725,
+  "reactivePower": 1.234,
+  "phaseAVoltage": 230.5,
+  "phaseACurrent": 115.3,
+  "dailyEnergyYield": 250.0,
+  "efficiency": 97.89
+}
+```
+
+### IEC 61850 Standard Naming
+Uses standardized electrical engineering field names for professional integration:
+```json
+{
+  "P": 79.725,
+  "Q": 1.234,
+  "Ua": 230.5,
+  "Ia": 115.3,
+  "EPId": 250.0,
+  "eff": 97.89
+}
+```
+
+### Field Mapping Reference
+
+| Descriptive Name | IEC 61850 | Description | Unit |
+|------------------|-----------|-------------|------|
+| `activePower` | `P` | Active power | kW |
+| `reactivePower` | `Q` | Reactive power | kVAR |
+| `inputPower` | `dcP` | DC input power | kW |
+| `powerFactor` | `PF` | Power factor | - |
+| `efficiency` | `eff` | Inverter efficiency | % |
+| `dailyEnergyYield` | `EPId` | Daily energy yield | kWh |
+| `totalEnergyYield` | `EPI` | Total energy yield | kWh |
+| `gridVoltageUAB` | `Uab` | Line voltage A-B | V |
+| `gridVoltageUBC` | `Ubc` | Line voltage B-C | V |
+| `gridVoltageUCA` | `Uca` | Line voltage C-A | V |
+| `phaseAVoltage` | `Ua` | Phase A voltage | V |
+| `phaseBVoltage` | `Ub` | Phase B voltage | V |
+| `phaseCVoltage` | `Uc` | Phase C voltage | V |
+| `phaseACurrent` | `Ia` | Phase A current | A |
+| `phaseBCurrent` | `Ib` | Phase B current | A |
+| `phaseCCurrent` | `Ic` | Phase C current | A |
+| `gridFrequency` | `Fr` | Grid frequency | Hz |
+| `internalTemperature` | `TempInt` | Internal temperature | °C |
+| `cabinetTemperature` | `TempCab` | Cabinet temperature | °C |
+| `pvTemperature` | `TempPV` | PV module temperature | °C |
+| `ambientTemperature` | `TempAmb` | Ambient temperature | °C |
+| `dcCurrent` | `dcI` | DC current | A |
+| `dcVoltage` | `dcU` | DC voltage | V |
+
+### PV String Fields
+| Descriptive Name | IEC 61850 | Description | Unit |
+|------------------|-----------|-------------|------|
+| `stringNumber` | `n` | String identifier | - |
+| `voltage` | `U` | String voltage | V |
+| `current` | `I` | String current | A |
+| `power` | `P` | String power | W |
 
 ---
 
@@ -166,32 +235,58 @@ Users can select which data categories to include:
 |-------|------|-------------|------|
 | `pvStrings` | array | Array of PV string objects | - |
 
-**PV String Object Structure:**
+**PV String Object Structure (Descriptive):**
 ```json
 {
+  "stringNumber": 1,   // String identifier
   "voltage": 775.9,    // String voltage (V)
   "current": 7.63,     // String current (A) 
   "power": 5920.117    // Calculated power (W)
 }
 ```
 
-**Example PV Strings Output:**
+**PV String Object Structure (IEC 61850):**
+```json
+{
+  "n": 1,              // String identifier
+  "U": 775.9,          // String voltage (V)
+  "I": 7.63,           // String current (A) 
+  "P": 5920.117        // Calculated power (W)
+}
+```
+
+**Example PV Strings Output (Descriptive):**
 ```json
 "pvStrings": [
   {
+    "stringNumber": 1,
     "voltage": 775.9,
     "current": 7.63,
     "power": 5920.117
   },
   {
+    "stringNumber": 2,
     "voltage": 775.9,
     "current": 7.5,
     "power": 5819.25
+  }
+]
+```
+
+**Example PV Strings Output (IEC 61850):**
+```json
+"pv": [
+  {
+    "n": 1,
+    "U": 775.9,
+    "I": 7.63,
+    "P": 5920.117
   },
   {
-    "voltage": 118,
-    "current": 0,
-    "power": 0
+    "n": 2,
+    "U": 775.9,
+    "I": 7.5,
+    "P": 5819.25
   }
 ]
 ```

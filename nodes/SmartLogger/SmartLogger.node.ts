@@ -80,6 +80,26 @@ export class SmartLogger implements INodeType {
 				description: 'Select which data categories to read from the SmartLogger',
 			},
 			{
+				displayName: 'Field Naming Convention',
+				name: 'namingConvention',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'Descriptive',
+						value: 'descriptive',
+						description: 'Use descriptive field names (e.g., activePower, phaseAVoltage)',
+					},
+					{
+						name: 'IEC 61850',
+						value: 'iec61850',
+						description: 'Use IEC 61850 standard field names (e.g., P, Ua)',
+					},
+				],
+				default: 'descriptive',
+				description: 'Choose output field naming: Descriptive or IEC 61850 standard',
+			},
+			{
 				displayName: 'Host',
 				name: 'host',
 				type: 'string',
@@ -171,6 +191,8 @@ export class SmartLogger implements INodeType {
 				const unitId = this.getNodeParameter('unitId', itemIndex) as number;
 				const timeout = this.getNodeParameter('timeout', itemIndex, 5000) as number;
 				const retries = this.getNodeParameter('retries', itemIndex, 3) as number;
+				const namingConvention = this.getNodeParameter('namingConvention', itemIndex, 'descriptive') as string;
+				const useIEC = namingConvention === 'iec61850';
 
 				// Create Modbus client configuration
 				const config: ModbusConnectionConfig = {
@@ -205,22 +227,22 @@ export class SmartLogger implements INodeType {
 							const categories = [];
 							
 							if (dataCategories.includes('system')) {
-								promises.push(smartLogger.readSystemData());
+								promises.push(smartLogger.readSystemData(useIEC));
 								categories.push('system');
 							}
 							
 							if (dataCategories.includes('power')) {
-								promises.push(smartLogger.readPowerData());
+								promises.push(smartLogger.readPowerData(useIEC));
 								categories.push('power');
 							}
 							
 							if (dataCategories.includes('environmental')) {
-								promises.push(smartLogger.readEnvironmentalData());
+								promises.push(smartLogger.readEnvironmentalData(useIEC));
 								categories.push('environmental');
 							}
 							
 							if (dataCategories.includes('alarms')) {
-								promises.push(smartLogger.readAlarmData());
+								promises.push(smartLogger.readAlarmData(useIEC));
 								categories.push('alarms');
 							}
 							

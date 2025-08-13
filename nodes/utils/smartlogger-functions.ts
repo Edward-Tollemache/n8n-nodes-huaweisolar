@@ -93,7 +93,7 @@ export class SmartLoggerFunctions {
 	/**
 	 * Read all system control data
 	 */
-	async readSystemData(): Promise<SmartLoggerSystemData> {
+	async readSystemData(useIEC?: boolean): Promise<SmartLoggerSystemData> {
 		const [datetime, locationCity, dstEnable] = await Promise.all([
 			this.readSystemDateTime(),
 			this.readLocationCity(),
@@ -217,7 +217,7 @@ export class SmartLoggerFunctions {
 	/**
 	 * Read all power monitoring data
 	 */
-	async readPowerData(): Promise<SmartLoggerPowerData> {
+	async readPowerData(useIEC?: boolean): Promise<SmartLoggerPowerData> {
 		const [
 			dcCurrentTotal,
 			inputPowerTotal,
@@ -242,18 +242,20 @@ export class SmartLoggerFunctions {
 			this.readDailyEnergy()
 		]);
 
-		return {
-			...(dcCurrentTotal !== null && { dcCurrentTotal }),
-			...(inputPowerTotal !== null && { inputPowerTotal }),
-			...(co2Reduction !== null && { co2Reduction }),
-			...(activePowerTotal !== null && { activePowerTotal }),
-			...(reactivePowerTotal !== null && { reactivePowerTotal }),
-			...(powerFactor !== null && { powerFactor }),
-			...(plantStatus !== null && { plantStatus }),
-			...(plantStatusXinjiang !== null && { plantStatusXinjiang }),
-			...(totalEnergy !== null && { totalEnergy }),
-			...(dailyEnergy !== null && { dailyEnergy })
-		};
+		const result: any = {};
+		
+		if (dcCurrentTotal !== null) result[useIEC ? 'dcI' : 'dcCurrentTotal'] = dcCurrentTotal;
+		if (inputPowerTotal !== null) result[useIEC ? 'dcP' : 'inputPowerTotal'] = inputPowerTotal;
+		if (co2Reduction !== null) result[useIEC ? 'CO2' : 'co2Reduction'] = co2Reduction;
+		if (activePowerTotal !== null) result[useIEC ? 'P' : 'activePowerTotal'] = activePowerTotal;
+		if (reactivePowerTotal !== null) result[useIEC ? 'Q' : 'reactivePowerTotal'] = reactivePowerTotal;
+		if (powerFactor !== null) result[useIEC ? 'PF' : 'powerFactor'] = powerFactor;
+		if (plantStatus !== null) result[useIEC ? 'status' : 'plantStatus'] = plantStatus;
+		if (plantStatusXinjiang !== null) result[useIEC ? 'statusXJ' : 'plantStatusXinjiang'] = plantStatusXinjiang;
+		if (totalEnergy !== null) result[useIEC ? 'EPI' : 'totalEnergy'] = totalEnergy;
+		if (dailyEnergy !== null) result[useIEC ? 'EPId' : 'dailyEnergy'] = dailyEnergy;
+		
+		return result;
 	}
 
 	// ============================================================================
@@ -317,7 +319,7 @@ export class SmartLoggerFunctions {
 	/**
 	 * Read all environmental monitoring data
 	 */
-	async readEnvironmentalData(): Promise<SmartLoggerEnvironmentalData> {
+	async readEnvironmentalData(useIEC?: boolean): Promise<SmartLoggerEnvironmentalData> {
 		const [
 			windSpeed,
 			windDirection,
@@ -334,14 +336,16 @@ export class SmartLoggerFunctions {
 			this.readDailyIrradiation()
 		]);
 
-		return {
-			...(windSpeed !== null && { windSpeed }),
-			...(windDirection !== null && { windDirection }),
-			...(pvTemperature !== null && { pvTemperature }),
-			...(ambientTemperature !== null && { ambientTemperature }),
-			...(irradiance !== null && { irradiance }),
-			...(dailyIrradiation !== null && { dailyIrradiation })
-		};
+		const result: any = {};
+		
+		if (windSpeed !== null) result[useIEC ? 'WindSpd' : 'windSpeed'] = windSpeed;
+		if (windDirection !== null) result[useIEC ? 'WindDir' : 'windDirection'] = windDirection;
+		if (pvTemperature !== null) result[useIEC ? 'TempPV' : 'pvTemperature'] = pvTemperature;
+		if (ambientTemperature !== null) result[useIEC ? 'TempAmb' : 'ambientTemperature'] = ambientTemperature;
+		if (irradiance !== null) result[useIEC ? 'Irr' : 'irradiance'] = irradiance;
+		if (dailyIrradiation !== null) result[useIEC ? 'IrrDly' : 'dailyIrradiation'] = dailyIrradiation;
+		
+		return result;
 	}
 
 	// ============================================================================
@@ -378,7 +382,7 @@ export class SmartLoggerFunctions {
 	/**
 	 * Read all alarm data
 	 */
-	async readAlarmData(): Promise<SmartLoggerAlarmData> {
+	async readAlarmData(useIEC?: boolean): Promise<SmartLoggerAlarmData> {
 		const [alarmInfo1, alarmInfo2, certificateAlarms] = await Promise.all([
 			this.readAlarmInfo1(),
 			this.readAlarmInfo2(),

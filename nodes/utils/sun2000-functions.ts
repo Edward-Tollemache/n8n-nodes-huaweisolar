@@ -284,7 +284,7 @@ export class SUN2000Functions {
 	 * String n: Voltage = 32014 + (2×n), Current = 32015 + (2×n)
 	 * Voltage gain=10, Current gain=100
 	 */
-	async readPVStrings(deviceAddress: number, stringCount?: number): Promise<Array<{voltage: number, current: number, power?: number}>> {
+	async readPVStrings(deviceAddress: number, stringCount?: number, useIEC?: boolean): Promise<Array<any>> {
 		// If string count not provided, try to read it first
 		if (!stringCount) {
 			const detectedStringCount = await this.readNumberOfStrings(deviceAddress);
@@ -298,7 +298,7 @@ export class SUN2000Functions {
 		// Limit to 24 strings maximum as per documentation
 		stringCount = Math.min(stringCount, 24);
 
-		const strings: Array<{voltage: number, current: number, power?: number}> = [];
+		const strings: Array<any> = [];
 
 		// Read strings in batches to minimize requests
 		const batchSize = 10; // Read 10 strings at a time (20 registers)
@@ -320,7 +320,14 @@ export class SUN2000Functions {
 						const current = toSignedInt16(result.data[currentIndex]) / 100.0;
 						const power = voltage * current; // Calculate power in watts
 						
-						strings.push({ voltage, current, power });
+						const stringData: any = {
+							[useIEC ? 'n' : 'stringNumber']: i + j + 1,
+							[useIEC ? 'U' : 'voltage']: voltage,
+							[useIEC ? 'I' : 'current']: current,
+							[useIEC ? 'P' : 'power']: power
+						};
+						
+						strings.push(stringData);
 					}
 				}
 			}
@@ -488,15 +495,15 @@ export class SUN2000Functions {
 	 * Read comprehensive inverter data using direct register access
 	 * Combines basic remapped data with enhanced direct register data
 	 */
-	async readInverterData(deviceAddress: number, deviceName?: string, dataCategories?: string[], alwaysIncludeAlarmTexts?: boolean): Promise<SUN2000InverterData> {
-		const result: SUN2000InverterData = {
+	async readInverterData(deviceAddress: number, deviceName?: string, dataCategories?: string[], alwaysIncludeAlarmTexts?: boolean, useIEC?: boolean): Promise<any> {
+		const result: any = {
 			unitId: deviceAddress,
 			...(deviceName && { deviceName })
 		};
 
 		try {
 			// Always read basic power data via remapped registers (for backward compatibility)
-			await this.readRemappedData(result, deviceAddress);
+			await this.readRemappedData(result, deviceAddress, useIEC);
 
 			// Read enhanced data based on categories (default to all if not specified)
 			const categories = dataCategories || ['device', 'power', 'voltages', 'currents', 'strings', 'status', 'alarms'];
@@ -527,10 +534,10 @@ export class SUN2000Functions {
 					this.readEfficiency(deviceAddress)
 				]);
 
-				if (peakPowerToday !== null) result.peakPowerToday = peakPowerToday;
-				if (dailyEnergyYield !== null) result.dailyEnergyYield = dailyEnergyYield;
-				if (totalEnergyYield !== null) result.totalEnergyYield = totalEnergyYield;
-				if (efficiency !== null) result.efficiency = efficiency;
+				if (peakPowerToday !== null) result[useIEC ? 'Pmax' : 'peakPowerToday'] = peakPowerToday;
+				if (dailyEnergyYield !== null) result[useIEC ? 'EPId' : 'dailyEnergyYield'] = dailyEnergyYield;
+				if (totalEnergyYield !== null) result[useIEC ? 'EPI' : 'totalEnergyYield'] = totalEnergyYield;
+				if (efficiency !== null) result[useIEC ? 'eff' : 'efficiency'] = efficiency;
 			}
 
 			// Grid voltages
@@ -540,12 +547,12 @@ export class SUN2000Functions {
 					this.readGridPhaseVoltages(deviceAddress)
 				]);
 
-				if (lineVoltages.UAB !== undefined) result.gridVoltageUAB = lineVoltages.UAB;
-				if (lineVoltages.UBC !== undefined) result.gridVoltageUBC = lineVoltages.UBC;
-				if (lineVoltages.UCA !== undefined) result.gridVoltageUCA = lineVoltages.UCA;
-				if (phaseVoltages.A !== undefined) result.phaseAVoltage = phaseVoltages.A;
-				if (phaseVoltages.B !== undefined) result.phaseBVoltage = phaseVoltages.B;
-				if (phaseVoltages.C !== undefined) result.phaseCVoltage = phaseVoltages.C;
+				if (lineVoltages.UAB !== undefined) result[useIEC ? 'Uab' : 'gridVoltageUAB'] = lineVoltages.UAB;
+				if (lineVoltages.UBC !== undefined) result[useIEC ? 'Ubc' : 'gridVoltageUBC'] = lineVoltages.UBC;
+				if (lineVoltages.UCA !== undefined) result[useIEC ? 'Uca' : 'gridVoltageUCA'] = lineVoltages.UCA;
+				if (phaseVoltages.A !== undefined) result[useIEC ? 'Ua' : 'phaseAVoltage'] = phaseVoltages.A;
+				if (phaseVoltages.B !== undefined) result[useIEC ? 'Ub' : 'phaseBVoltage'] = phaseVoltages.B;
+				if (phaseVoltages.C !== undefined) result[useIEC ? 'Uc' : 'phaseCVoltage'] = phaseVoltages.C;
 			}
 
 			// Grid currents and frequency
@@ -555,17 +562,17 @@ export class SUN2000Functions {
 					this.readGridFrequency(deviceAddress)
 				]);
 
-				if (phaseCurrents.A !== undefined) result.phaseACurrent = phaseCurrents.A;
-				if (phaseCurrents.B !== undefined) result.phaseBCurrent = phaseCurrents.B;
-				if (phaseCurrents.C !== undefined) result.phaseCCurrent = phaseCurrents.C;
-				if (gridFrequency !== null) result.gridFrequency = gridFrequency;
+				if (phaseCurrents.A !== undefined) result[useIEC ? 'Ia' : 'phaseACurrent'] = phaseCurrents.A;
+				if (phaseCurrents.B !== undefined) result[useIEC ? 'Ib' : 'phaseBCurrent'] = phaseCurrents.B;
+				if (phaseCurrents.C !== undefined) result[useIEC ? 'Ic' : 'phaseCCurrent'] = phaseCurrents.C;
+				if (gridFrequency !== null) result[useIEC ? 'Fr' : 'gridFrequency'] = gridFrequency;
 			}
 
 			// PV string data
 			if (categories.includes('strings')) {
-				const pvStrings = await this.readPVStrings(deviceAddress, result.numberOfStrings);
+				const pvStrings = await this.readPVStrings(deviceAddress, result.numberOfStrings, useIEC);
 				if (pvStrings.length > 0) {
-					result.pvStrings = pvStrings;
+					result[useIEC ? 'pv' : 'pvStrings'] = pvStrings;
 				}
 			}
 
@@ -581,7 +588,7 @@ export class SUN2000Functions {
 				if (deviceStatus.code !== undefined) result.deviceStatus = deviceStatus.code;
 				if (deviceStatus.text) result.deviceStatusText = deviceStatus.text;
 				if (runningStatus !== null) result.runningStatus = runningStatus;
-				if (internalTemp !== null) result.internalTemperature = internalTemp;
+				if (internalTemp !== null) result[useIEC ? 'TempInt' : 'internalTemperature'] = internalTemp;
 				if (insulationResistance !== null) result.insulationResistance = insulationResistance;
 			}
 
@@ -611,7 +618,7 @@ export class SUN2000Functions {
 	/**
 	 * Read basic remapped register data (for backward compatibility)
 	 */
-	private async readRemappedData(result: SUN2000InverterData, deviceAddress: number): Promise<void> {
+	private async readRemappedData(result: any, deviceAddress: number, useIEC?: boolean): Promise<void> {
 		try {
 			// Read power data (offsets 0-8)
 			const baseRegister = this.getRemappedRegister(deviceAddress, 0);
@@ -625,21 +632,21 @@ export class SUN2000Functions {
 				
 				// Active Power: Offset 0-1 (I32, gain=1000)
 				const activePowerRaw = combineI32RegistersLE(registers[0], registers[1]);
-				result.activePower = activePowerRaw / 1000.0;
+				result[useIEC ? 'P' : 'activePower'] = activePowerRaw / 1000.0;
 				
 				// Reactive Power: Offset 2-3 (I32, gain=1000)
 				const reactivePowerRaw = combineI32RegistersLE(registers[2], registers[3]);
-				result.reactivePower = reactivePowerRaw / 1000.0;
+				result[useIEC ? 'Q' : 'reactivePower'] = reactivePowerRaw / 1000.0;
 				
 				// DC Current: Offset 4 (I16, gain=100)
-				result.dcCurrent = toSignedInt16(registers[4]) / 100.0;
+				result[useIEC ? 'dcI' : 'dcCurrent'] = toSignedInt16(registers[4]) / 100.0;
 				
 				// Input Power: Offset 5-6 (U32, gain=1000)
 				const inputPowerRaw = combineU32RegistersLE(registers[5], registers[6]);
-				result.inputPower = inputPowerRaw / 1000.0;
+				result[useIEC ? 'dcP' : 'inputPower'] = inputPowerRaw / 1000.0;
 				
 				// Power Factor: Offset 8 (I16, gain=1000)
-				result.powerFactor = toSignedInt16(registers[8]) / 1000.0;
+				result[useIEC ? 'PF' : 'powerFactor'] = toSignedInt16(registers[8]) / 1000.0;
 			}
 
 			// Read status and temperature (offsets 9, 11)
@@ -652,7 +659,7 @@ export class SUN2000Functions {
 			const tempRegister = this.getRemappedRegister(deviceAddress, 11);
 			const tempResult = await this.client.readI16(tempRegister, 0);
 			if (tempResult.success) {
-				result.cabinetTemperature = tempResult.data! / 10.0;
+				result[useIEC ? 'TempCab' : 'cabinetTemperature'] = tempResult.data! / 10.0;
 			}
 
 			// Read fault data (offsets 12-17)
@@ -684,14 +691,15 @@ export class SUN2000Functions {
 	async readMultipleInverters(
 		devices: Array<{unitId: number, deviceAddress: number, deviceName?: string}>,
 		dataCategories?: string[],
-		alwaysIncludeAlarmTexts?: boolean
-	): Promise<SUN2000InverterData[]> {
-		const results: SUN2000InverterData[] = [];
+		alwaysIncludeAlarmTexts?: boolean,
+		useIEC?: boolean
+	): Promise<any[]> {
+		const results: any[] = [];
 
 		// Process inverters one by one to be safe
 		for (const device of devices) {
 			try {
-				const inverterData = await this.readInverterData(device.deviceAddress, device.deviceName, dataCategories, alwaysIncludeAlarmTexts);
+				const inverterData = await this.readInverterData(device.deviceAddress, device.deviceName, dataCategories, alwaysIncludeAlarmTexts, useIEC);
 				results.push(inverterData);
 				
 				// Small delay between inverters to be gentle on the network
