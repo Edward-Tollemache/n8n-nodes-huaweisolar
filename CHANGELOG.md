@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.0.014] - 2025-08-13
+### Changed
+- **BREAKING CHANGE**: Restructured SUN2000 output to nested telemetry/status objects
+- Single item per inverter instead of 2 separate items for better MQTT integration
+- Telemetry data now nested under `telemetry` object
+- Status/alarm data now nested under `status` object  
+- Device identification remains at root level (ts, unitId, deviceName, serialNumber, model)
+
+### Enhanced
+- Cleaner MQTT message structure for easier field extraction
+- Consistent output format with predictable nested objects
+- Simplified downstream processing (1 item per inverter vs 2 items)
+- Better organization of measurement vs status data
+
+### Migration Notes
+- Output pattern: N inverters → N items (was 2×N items in v0.0.013)
+- Access telemetry: `item.telemetry.P` instead of `item.P`
+- Access status: `item.status.alarm1` instead of `item.alarm1`
+
 ## [0.0.013] - 2025-08-13
 ### Changed
 - **BREAKING CHANGE**: Restructured SUN2000 node output format for MQTT integration

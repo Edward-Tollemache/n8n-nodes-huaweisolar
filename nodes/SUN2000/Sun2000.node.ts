@@ -54,13 +54,13 @@ export class Sun2000 implements INodeType {
 		return ['unitId', 'deviceName', 'serialNumber', 'model'];
 	}
 
-	private static splitInverterData(inverterData: any, timestamp: string): { telemetry: any, status: any } {
+	private static createNestedInverterData(inverterData: any, timestamp: string): any {
 		const telemetryFields = this.getTelemetryFields();
 		const statusFields = this.getStatusFields();
 		const identificationFields = this.getIdentificationFields();
 
-		// Base objects with timestamp and identification
-		const baseData = {
+		// Root level data: timestamp + device identification
+		const rootData = {
 			ts: timestamp,
 			...Object.fromEntries(
 				identificationFields
@@ -69,28 +69,35 @@ export class Sun2000 implements INodeType {
 			)
 		};
 
-		// Telemetry data
-		const telemetry = {
-			...baseData,
-			...Object.fromEntries(
-				telemetryFields
-					.filter(field => inverterData[field] !== undefined)
-					.map(field => [field, inverterData[field]])
-			)
-		};
+		// Nested telemetry object
+		const telemetryData = Object.fromEntries(
+			telemetryFields
+				.filter(field => inverterData[field] !== undefined)
+				.map(field => [field, inverterData[field]])
+		);
 
-		// Status data
-		const status = {
-			...baseData,
-			...Object.fromEntries(
-				statusFields
-					.filter(field => inverterData[field] !== undefined)
-					.map(field => [field, inverterData[field]])
-			)
-		};
+		// Nested status object
+		const statusData = Object.fromEntries(
+			statusFields
+				.filter(field => inverterData[field] !== undefined)
+				.map(field => [field, inverterData[field]])
+		);
 
-		return { telemetry, status };
+		// Build final nested structure
+		const result: any = { ...rootData };
+		
+		// Always include telemetry and status objects (even if empty) for consistency
+		if (Object.keys(telemetryData).length > 0) {
+			result.telemetry = telemetryData;
+		}
+		
+		if (Object.keys(statusData).length > 0) {
+			result.status = statusData;
+		}
+
+		return result;
 	}
+
 
 	private static processInverterDataToItems(
 		inverters: any[], 
@@ -100,7 +107,7 @@ export class Sun2000 implements INodeType {
 	): void {
 		for (const inverter of inverters) {
 			if (inverter.error) {
-				// For failed inverters, create a status item with error information
+				// For failed inverters, create a single error item
 				returnData.push({
 					json: {
 						ts: timestamp,
@@ -111,37 +118,16 @@ export class Sun2000 implements INodeType {
 					pairedItem: itemIndex,
 				});
 			} else {
-				// Split successful inverter data into telemetry and status items
-				const { telemetry, status } = Sun2000.splitInverterData(inverter, timestamp);
-				
-				// Only add telemetry item if it has measurement data
-				if (Sun2000.hasTelemetryData(telemetry)) {
-					returnData.push({
-						json: telemetry,
-						pairedItem: itemIndex,
-					});
-				}
-				
-				// Only add status item if it has status/alarm data
-				if (Sun2000.hasStatusData(status)) {
-					returnData.push({
-						json: status,
-						pairedItem: itemIndex,
-					});
-				}
+				// Create single item with nested telemetry and status objects
+				const nestedItem = Sun2000.createNestedInverterData(inverter, timestamp);
+				returnData.push({
+					json: nestedItem,
+					pairedItem: itemIndex,
+				});
 			}
 		}
 	}
 
-	private static hasTelemetryData(telemetry: any): boolean {
-		const telemetryFields = Sun2000.getTelemetryFields();
-		return telemetryFields.some(field => telemetry[field] !== undefined);
-	}
-
-	private static hasStatusData(status: any): boolean {
-		const statusFields = Sun2000.getStatusFields();
-		return statusFields.some(field => status[field] !== undefined);
-	}
 
 	description: INodeTypeDescription = {
 		displayName: 'Huawei SUN2000 Inverter',
