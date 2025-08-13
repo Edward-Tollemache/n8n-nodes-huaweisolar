@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.013] - 2025-08-13
+### Changed
+- **BREAKING CHANGE**: Restructured SUN2000 node output format for MQTT integration
+- Node now outputs individual items instead of array wrapper format
+- Each inverter generates 2 separate items: telemetry data + status/alarm data
+- Added timestamp (`ts`) field to each output item
+- Improved data separation for downstream processing and MQTT publishing
+
+### Enhanced
+- Better error handling for failed inverters (preserves unitId and deviceName)
+- Optimized output structure for time-series databases
+- Separated measurement data from status/alarm data for cleaner processing
+
 ## [0.0.012] - 2025-08-13
 ### Added
 - Field Naming Convention toggle for both SmartLogger and SUN2000 nodes

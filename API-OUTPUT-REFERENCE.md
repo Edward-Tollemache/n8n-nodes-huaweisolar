@@ -165,25 +165,81 @@ The SmartLogger node provides two main operations for interacting with Huawei Sm
 
 ## SUN2000 Inverter Node Output
 
-The SUN2000 node provides detailed inverter data with comprehensive monitoring capabilities.
+The SUN2000 node provides detailed inverter data with comprehensive monitoring capabilities. **Starting from version 0.0.013**, the node outputs individual items instead of an array wrapper format for better MQTT integration and data separation.
 
-### Basic Output Structure
+### New Output Structure (v0.0.013+)
 
+Each inverter produces **2 separate items**:
+
+#### Item 1: Telemetry Data
 ```json
 {
-  "inverters": [
-    {
-      "unitId": 12,
-      "deviceName": "Inverter-12",
-      /* Inverter data fields based on selected categories */
-    }
-  ],
-  "_metadata": {
-    "operation": "readFromDiscovery" | "specifyDevices",
-    "inverterCount": 4,
-    "timestamp": "2025-07-29T08:30:25.791Z",
-    "success": true
-  }
+  "ts": "2025-08-13T07:41:48.093Z",
+  "unitId": 12,
+  "deviceName": "A",
+  "serialNumber": "ES2450055458",
+  "model": "SUN2000-100KTL-M2",
+  
+  // Pure measurement data
+  "P": 57.925,
+  "Q": 11.823,
+  "PF": 0.98,
+  "dcI": 76.54,
+  "dcP": 58.939,
+  "eff": 98.28,
+  "Uab": 404.2,
+  "Ua": 231.8,
+  "Ia": 84.338,
+  "Fr": 50,
+  "EPId": 83.88,
+  "EPI": 105389.88,
+  "TempCab": 40,
+  "numberOfStrings": 20,
+  "ratedPower": 100,
+  "pv": [
+    {"n": 1, "U": 780.6, "I": 6.26, "P": 4886.556},
+    {"n": 2, "U": 780.6, "I": 6.05, "P": 4722.63}
+  ]
+}
+```
+
+#### Item 2: Status/Alarm Data
+```json
+{
+  "ts": "2025-08-13T07:41:48.093Z", 
+  "unitId": 12,
+  "deviceName": "A",
+  "serialNumber": "ES2450055458",
+  "model": "SUN2000-100KTL-M2",
+  
+  // Status and alarm fields only
+  "status": 512,
+  "deviceStatus": 512,
+  "deviceStatusText": "On-grid",
+  "runningStatus": 7,
+  "alarm1": 0,
+  "alarm2": 0,
+  "alarm3": 0,
+  "faultCode": 0
+}
+```
+
+### Multiple Inverter Example
+
+**Input**: 2 working inverters + 1 failed inverter  
+**Output**: 5 items total
+
+- Items 1-2: Inverter A (telemetry + status)
+- Items 3-4: Inverter B (telemetry + status)  
+- Item 5: Inverter C (error information)
+
+```json
+// Item 5 (Error case)
+{
+  "ts": "2025-08-13T07:41:48.093Z",
+  "unitId": 14,
+  "deviceName": "C", 
+  "error": "Connection timeout after 5000ms"
 }
 ```
 
